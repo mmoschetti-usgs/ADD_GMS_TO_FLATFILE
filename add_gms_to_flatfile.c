@@ -37,8 +37,8 @@ void assign_cols_flatfile(char **columns, float *stLat, float *stLon, float *evM
   *evSec=atof(columns[22]);
   network=strcpy(network,columns[1]);
   stationNm=strcpy(stationNm,columns[2]);
-  fprintf(stderr,"assign_cols_flatfile, evMag/stLat: %f %f\n", *evMag, *stLat);
-  fprintf(stderr,"assign_cols_flatfile, network/stationNm: %s %s\n", network, stationNm);
+//  fprintf(stderr,"assign_cols_flatfile, evMag/stLat: %f %f\n", *evMag, *stLat);
+//  fprintf(stderr,"assign_cols_flatfile, network/stationNm: %s %s\n", network, stationNm);
 
 }
 
@@ -62,7 +62,7 @@ int main (int argc, char *argv[])
 /*--------------------------------------------------------------------------*/
 {
   FILE *fpFlatFileMod, *fpFlatFile, *fpAddToFlatFile;
-  int cnt, cnt1, cnt2, cnt3;
+  int cnt, cntMod=0, cntOrig=0, cnt1, cnt2, cnt3;
   int hlines;
   int cols_found, diffSec, minDiff;
   int evYear, evMon, evDay, evHour, evMin;
@@ -120,7 +120,8 @@ int main (int argc, char *argv[])
     fprintf(fpFlatFileMod,"%s",buff);
   }
   cnt1=0;
-// loop over data values
+
+// LOOP OVER FLATFILE LINES 
   while( fgets(buff,BUFFLEN,fpFlatFile) ) {
     if ( strlen(buff) > BUFFLEN ) {
       fprintf(stderr,"Increase BUFFLEN from %d.\n", (int)BUFFLEN);
@@ -130,16 +131,13 @@ int main (int argc, char *argv[])
 //    fprintf(fpFlatFileMod,"%s,",buff);
     columns = NULL;
     cols_found = getcols(buff, delim, &columns);
-fprintf(stderr,"cols_found: %d\n",cols_found);
-fprintf(stderr,"columns: %d %s %s\n",atoi(columns[0]),columns[1], columns[2]);
+//fprintf(stderr,"cols_found: %d\n",cols_found);
+//fprintf(stderr,"columns: %d %s %s\n",atoi(columns[0]),columns[1], columns[2]);
     assign_cols_flatfile(columns, &stLat, &stLon, &evMag, &evLon, &evLat, &evDep, &evYear, &evMon, &evDay, &evHour, &evMin, &evSec, network, stationNm);
-//      for ( i = 0; i < cols_found; i++ ) printf("Column[ %d ] = %s\n", i, columns[ i ] ); 
-//    free(columns);
     epochTimeFlatFile=compute_epochTime(evYear,evMon,evDay,evHour,evMin,(int)evSec);
-// loop through modified flatfile, add additional ground motions, as needed
-// loop through reprocessed ground motions
-    objMisfit=25;
-//      fpAddToFlatFile = fopen(addToFlatFile, "r");
+
+// LOOP THROUGH ALL LINES IN MODIFIED FLATFILE
+    objMisfit=5;
 // header lines
     fgets(buff2,BUFFLEN,fpAddToFlatFile);
     fgets(buff2,BUFFLEN,fpAddToFlatFile);
@@ -147,8 +145,8 @@ fprintf(stderr,"columns: %d %s %s\n",atoi(columns[0]),columns[1], columns[2]);
       strip(buff2);
       columns2 = NULL;
       cols_found = getcols(buff2, delim, &columns2);
-fprintf(stderr,"from %s",addToFlatFile);
-fprintf(stderr,"%s\n",buff2);
+//fprintf(stderr,"from %s",addToFlatFile);
+//fprintf(stderr,"%s\n",buff2);
       assign_cols_flatfile(columns2, &stLat2, &stLon2, &evMag2, &evLon2, &evLat2, &evDep2, &evYear2, &evMon2, &evDay2, &evHour2, &evMin2, &evSec2, network2, stationNm2);
       free(columns2);
       delaz_(&stLat,&stLon,&stLat2,&stLon2,&dist,&az,&baz);
@@ -162,25 +160,24 @@ fprintf(stderr,"%s\n",buff2);
         objMisfit=objMtmp;
         strcpy(buffFin,buff2);
         fprintf(stderr,"objMisfit/dist/dist2/diffSec/diffMag: %.1f %.1f %.1f %.1f\n", objMisfit, dist, dist2, diffSec, diffMag);
-        fprintf(stderr,"mag: %f %f\n", evMag, evMag2);
+//        fprintf(stderr,"mag: %f %f\n", evMag, evMag2);
 //          fprintf(stderr,"cnt1/cnt2: %d %d\n", cnt1, cnt2);
 //          fprintf(stderr,"%s\n%s\n", buff, buff2);
       }
-      else {
-        fprintf(stderr,"NO MATCH: objMisfit/dist/dist2/diffSec/diffMag: %.1f %.1f %.1f %.1f %s-%s (%s-%s)\n", objMisfit, dist, dist2, diffSec, diffMag, network2,stationNm2,network,stationNm);
-      }
       if ( objMisfit < 1 ) break;
-//        fprintf(stderr,"%s\n%s\n", buff, buffFin);
-fprintf(stderr,"HERE\n");
-exit(1);
+//      else {
+//        fprintf(stderr,"NO MATCH: objMisfit/dist/dist2/diffSec/diffMag: %.1f %.1f %.1f %.1f %s-%s (%s-%s)\n", objMisfit, dist, dist2, diffSec, diffMag, network2,stationNm2,network,stationNm);
+//      }
     }
+// rewind to beginning of file for next iteration through original flatfile
     rewind(fpAddToFlatFile);
-//      fclose(fpAddToFlatFile);
-// write modified flatfile
+
+// WRITE MODIFIED FLATFILE
     if ( objMisfit < 1 ) {
-      fprintf(stderr,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f\n", stLat, stLat2, stLon, stLon2, evLat, evLat2, evLon, evLon2,evMag, evMag2);
-      fprintf(stderr,"flatfile: %s\n", buff);
-      fprintf(stderr,"modified flatfile %s\n", buffFin);
+      cntMod++;
+//      fprintf(stderr,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f\n", stLat, stLat2, stLon, stLon2, evLat, evLat2, evLon, evLon2,evMag, evMag2);
+//      fprintf(stderr,"flatfile: %s\n", buff);
+//      fprintf(stderr,"modified flatfile %s\n", buffFin);
       columnsOrig = NULL;
       columnsFinal = NULL;
       cols_found = getcols(buff, delim, &columnsOrig);
@@ -198,19 +195,20 @@ exit(1);
       }
       free(columnsOrig);
       free(columnsFinal);
-exit(1);
     }
     else {
+      cntOrig++;
       fprintf(fpFlatFileMod,"%s,",buff);
     }
     fprintf(fpFlatFileMod,"\n");
     if ( cnt1%100 == 0 ) {
       fprintf(stderr,"cnt1=%d\n", cnt1); 
     }
+//    if ( cnt1 > 10 ) exit(1);
     free(columns);
     cnt1++;
-exit(1);
   }
+  fprintf(stderr,"Wrote modified flatfile, %s\n%d original lines\n%d modified lines\n", flatFileMod, cntOrig, cntMod);
 
 
 // close files
